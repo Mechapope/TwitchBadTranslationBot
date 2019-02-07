@@ -17,23 +17,25 @@ namespace TwitchBadTranslationBot
         public string userName;
         public string channel;
         public string commandName;
-        public int numOfTranslations = 3;
-        public string[] supportedLanguages = { "af", "sq", "az", "eu", "ca", "hr", "cs", "da", "nl", "en", "eo", "et", "tl", "fi", "fr", "gl", "de", "ht", "hu", "is", "id", "ga", "it", "la", "lv", "lt", "ms", "mt", "no", "pl", "pt", "ro", "sk", "sl", "es", "sw", "sv", "tr", "vi", "cy" };
-        public int commandCooldown = 60;
-
+        public int numTranslations;
+        public string[] supportedLanguages;
+        public int commandCooldown;
 
         private TcpClient _tcpClient;
         private StreamReader _inputStream;
         private StreamWriter _outputStream;
         private static readonly HttpClient client = new HttpClient();
 
-        public Bot(string ip, int port, string userName, string authToken, string channel, string commandName)
+        public Bot(string ip, int port, string userName, string authToken, string channel, string commandName, int commandCooldown, int numTranslations, string[] supportedLanguages )
         {
             try
             {
                 this.userName = userName;
                 this.channel = channel;
                 this.commandName = commandName;
+                this.commandCooldown = commandCooldown;
+                this.numTranslations = numTranslations;
+                this.supportedLanguages = supportedLanguages;                
 
                 _tcpClient = new TcpClient(ip, port);
                 _inputStream = new StreamReader(_tcpClient.GetStream());
@@ -132,7 +134,7 @@ namespace TwitchBadTranslationBot
             //first language always has to be english
             string previousLanguage = "en";
 
-            for (int i = 0; i < numOfTranslations; i++)
+            for (int i = 0; i < numTranslations; i++)
             {
                 //pick a random language to translate to
                 string nextLanguage = supportedLanguages[r.Next(supportedLanguages.Count())];
@@ -143,7 +145,7 @@ namespace TwitchBadTranslationBot
                     nextLanguage = supportedLanguages[r.Next(supportedLanguages.Count())];
                 }
 
-                text = Translate(text, previousLanguage, nextLanguage);
+                text = FreeTranslate(text, previousLanguage, nextLanguage);
 
                 previousLanguage = nextLanguage;
             }
@@ -154,15 +156,39 @@ namespace TwitchBadTranslationBot
             }
 
             //finally, translate back to english
-            text = Translate(text, previousLanguage, "en");
+            text = FreeTranslate(text, previousLanguage, "en");
 
             return text;
         }
 
         private string FreeTranslate(string text, string inLanguage, string outLanguage)
         {
-            //https://translate.googleapis.com/translate_a/single?ie=UTF-8&oe=UTF-8&multires=1&client=gtx&sl=en&tl=fr&dt=t&q=hello%20world
-            return "";
+            try
+            {
+                string translateUrl = "https://translate.googleapis.com/translate_a/single?ie=UTF-8&oe=UTF-8&multires=1&client=gtx&sl=" + inLanguage + "&tl=" + outLanguage + "&dt=t&q=" + WebUtility.UrlEncode(text);
+
+                var response = client.PostAsync(translateUrl, null).Result;
+                string contents = response.Content.ReadAsStringAsync().Result;
+
+                //parsing json is fun
+                var objson = JsonConvert.DeserializeObject<List<object>>(contents)[0];
+                var jsonStrings = JsonConvert.DeserializeObject<List<List<string>>>(objson.ToString());
+
+                StringBuilder sb = new StringBuilder();
+
+                foreach (var item in jsonStrings)
+                {
+                    //first index is the translated value, dont care about the rest
+                    sb.Append(item[0]);
+                }
+
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                //google blocked us :(
+                return "error";
+            }
         }
 
         private string Translate(string text, string inLanguage, string outLanguage)
