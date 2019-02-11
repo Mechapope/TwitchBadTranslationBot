@@ -26,7 +26,7 @@ namespace TwitchBadTranslationBot
         private StreamWriter _outputStream;
         private static readonly HttpClient client = new HttpClient();
 
-        public Bot(string ip, int port, string userName, string authToken, string channel, string commandName, int commandCooldown, int numTranslations, string[] supportedLanguages )
+        public Bot(string ip, int port, string userName, string authToken, string channel, string commandName, int commandCooldown, int numTranslations, string[] supportedLanguages)
         {
             try
             {
@@ -35,7 +35,7 @@ namespace TwitchBadTranslationBot
                 this.commandName = commandName;
                 this.commandCooldown = commandCooldown;
                 this.numTranslations = numTranslations;
-                this.supportedLanguages = supportedLanguages;                
+                this.supportedLanguages = supportedLanguages;
 
                 _tcpClient = new TcpClient(ip, port);
                 _inputStream = new StreamReader(_tcpClient.GetStream());
@@ -149,11 +149,11 @@ namespace TwitchBadTranslationBot
 
                 previousLanguage = nextLanguage;
             }
-
-            while (previousLanguage == "en")
-            {
-                previousLanguage = supportedLanguages[r.Next(supportedLanguages.Count())];
-            }
+            //why did i do this
+            //while (previousLanguage == "en")
+            //{
+            //    previousLanguage = supportedLanguages[r.Next(supportedLanguages.Count())];
+            //}
 
             //finally, translate back to english
             text = FreeTranslate(text, previousLanguage, "en");

@@ -30,7 +30,7 @@ namespace TwitchBadTranslationBot
                 thread.Start();
             }
 
-            //chill out
+            //chill out while the bot runs
             while (true)
             {
                 Thread.Sleep(10000);
